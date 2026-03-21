@@ -1,0 +1,84 @@
+using Npgsql;
+using System;
+using System.Data;
+using System.Windows.Forms;
+
+namespace Tur_Comp3
+{
+    public partial class LoginForm : Form
+    {
+        public LoginForm()
+        {
+            InitializeComponent();
+        }
+
+        // Кнопка входа
+        private void login_btn_Click(object sender, EventArgs e)
+        {
+            string user = login_username.Text.Trim();
+            string pass = login_password.Text.Trim();
+
+            // Проверяем, не пустые ли поля
+            if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(pass))
+            {
+                MessageBox.Show("Please fill all blank fields", "Error Message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // ИСПОЛЬЗУЕМ ВАШ КЛАСС MainClass для проверки
+            if (MainClass.IsValidUser(user, pass))
+            {
+                MessageBox.Show("Login successfully!", "Information Message", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // Переход на главную форму
+                MainForm mainForm = new MainForm();
+                this.Hide(); // Скрываем форму логина
+                mainForm.ShowDialog();
+                this.Close(); // Закрываем совсем после выхода из главной формы
+            }
+            else
+            {
+                MessageBox.Show("Incorrect Username or password!", "Error Message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // Кнопка закрытия приложения
+        private void close_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("Are you want to close this app?", "Confirmation message", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                Application.Exit();
+            }
+        }
+
+        // Переход на форму регистрации
+        private void label4_Click(object sender, EventArgs e)
+        {
+            signupForm signupForm = new signupForm();
+            signupForm.Show();
+            this.Hide();
+        }
+
+        // Показать/скрыть пароль
+        private void login_showPassword_CheckedChanged(object sender, EventArgs e)
+        {
+            login_password.UseSystemPasswordChar = !login_showPassword.Checked;
+            // Или если используете PasswordChar:
+            // login_password.PasswordChar = login_showPassword.Checked ? '\0' : '*';
+        }
+
+        // Этот метод больше не нужен здесь, так как логика в MainClass
+        // Но если он вам нужен для тестов, оставьте.
+        private void SqlConnectionReader()
+        {
+            // Используем строку подключения из MainClass, чтобы не дублировать
+            using (NpgsqlConnection sqlConnection = new NpgsqlConnection(MainClass.con_string))
+            {
+                sqlConnection.Open();
+                NpgsqlCommand command = new NpgsqlCommand("SELECT * FROM users", sqlConnection);
+                NpgsqlDataReader dataReader = command.ExecuteReader();
+                // ... логика чтения ...
+            }
+        }
+    }
+}
