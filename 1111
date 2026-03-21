@@ -1,0 +1,100 @@
+using System;
+using System.Data;
+using Npgsql;
+using System.Windows.Forms;
+
+namespace Tur_Comp3
+{
+    class MainClass
+    {
+        // Используем имя connectionString, как вы просили
+        public static string connectionString = "Server=localhost; Port=5432; Database=Tur_Comp; User Id=postgres; Password=1111;";
+        
+        // Создаем подключение
+        public static NpgsqlConnection con = new NpgsqlConnection(connectionString);
+
+        // --- Переменные для хранения имени пользователя (из видео) ---
+        public static string user;
+        public static string USER
+        {
+            get { return user; }
+            private set { user = value; }
+        }
+        // -----------------------------------------------------------
+
+        // Метод проверки пользователя
+        public static bool IsValidUser(string username, string pass)
+        {
+            bool isValid = false;
+
+            // Запрос (проверьте, что в БД столбец называется password)
+            string qry = "SELECT * FROM users WHERE username = @user AND password = @pass";
+
+            try
+            {
+                if (con.State == ConnectionState.Closed)
+                {
+                    con.Open();
+                }
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand(qry, con))
+                {
+                    cmd.Parameters.AddWithValue("@user", username);
+                    cmd.Parameters.AddWithValue("@pass", pass);
+
+                    DataTable dt = new DataTable();
+                    NpgsqlDataAdapter da = new NpgsqlDataAdapter(cmd);
+                    da.Fill(dt);
+
+                    if (dt.Rows.Count > 0)
+                    {
+                        isValid = true;
+                        
+                        // Дополнение из видео: сохраняем имя пользователя из БД в переменную
+                        // В кавычках указываем имя столбца из вашей таблицы — "username"
+                        USER = dt.Rows[0]["username"].ToString();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка подключения: " + ex.Message);
+            }
+            finally
+            {
+                con.Close();
+            }
+
+            return isValid;
+        }
+
+        // Дополнительный метод для регистрации (чтобы работал с новой строкой подключения)
+        public static bool RegisterUser(string username, string pass)
+        {
+            try
+            {
+                if (con.State == ConnectionState.Closed) con.Open();
+
+                string qry = "INSERT INTO users (username, password, date_created, status) VALUES(@usern, @pass, @date, @status)";
+                using (NpgsqlCommand cmd = new NpgsqlCommand(qry, con))
+                {
+                    cmd.Parameters.AddWithValue("@usern", username);
+                    cmd.Parameters.AddWithValue("@pass", pass);
+                    cmd.Parameters.AddWithValue("@date", DateTime.Today);
+                    cmd.Parameters.AddWithValue("@status", "Active");
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка регистрации: " + ex.Message);
+                return false;
+            }
+            finally
+            {
+                con.Close();
+            }
+        }
+    }
+}
