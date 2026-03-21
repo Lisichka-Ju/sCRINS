@@ -1,0 +1,54 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using Npgsql; // Заменили SqlClient на Npgsql
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace RM
+{
+    class MainClass
+    {
+        // Формат строки подключения для PostgreSQL
+        public static readonly string con_string = "Host=localhost;Username=postgres;Password=your_password;Database=RM";
+        
+        // Создаем подключение
+        public static NpgsqlConnection con = new NpgsqlConnection(con_string);
+
+        // Метод проверки пользователя
+        public static bool IsValidUser(string user, string pass)
+        {
+            bool isValid = false;
+
+            // Используем параметры @user и @pass для защиты от взлома (SQL Injection)
+            string qry = "SELECT * FROM users WHERE username = @user AND upass = @pass";
+
+            try
+            {
+                using (NpgsqlCommand cmd = new NpgsqlCommand(qry, con))
+                {
+                    // Добавляем параметры
+                    cmd.Parameters.AddWithValue("@user", user);
+                    cmd.Parameters.AddWithValue("@pass", pass);
+
+                    DataTable dt = new DataTable();
+                    NpgsqlDataAdapter da = new NpgsqlDataAdapter(cmd);
+                    da.Fill(dt);
+
+                    if (dt.Rows.Count > 0)
+                    {
+                        isValid = true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Здесь можно добавить вывод ошибки, если база недоступна
+                Console.WriteLine("Ошибка: " + ex.Message);
+            }
+
+            return isValid;
+        }
+    }
+}
