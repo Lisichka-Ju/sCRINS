@@ -1,0 +1,104 @@
+using Npgsql;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace Tur_Comp3
+{
+    public partial class LoginForm : Form
+    {
+        //string connectionString = @"Host=localhost;Username=postgres;Password=1111;Database=Tur_Comp";
+        string connectionString = "Server=localhost; Port=5432; Database=Tur_Comp; User Id = postgres; Password=1111;";
+
+        public LoginForm()
+        {
+            InitializeComponent();
+        }
+
+        private void SqlConnectionReader()
+        {
+            NpgsqlConnection sqlConnection = new NpgsqlConnection(connectionString);
+            sqlConnection.Open();
+
+            NpgsqlCommand command = new NpgsqlCommand();
+            command.Connection = sqlConnection;
+            command.CommandType = CommandType.Text;
+            command.CommandText = "SELECT * FROM users";
+
+            NpgsqlDataReader dataReader = command.ExecuteReader();
+            if (dataReader.HasRows)
+            {
+
+            }
+
+            command.Dispose();
+            sqlConnection.Close();
+        }
+
+
+
+        private void close_Click(object sender, EventArgs e)
+        {
+            //при нажатии на кнопку закрыть выводится сообщение. елм в ответе yes, то закрывается, если no то остаемся на форме
+            if (MessageBox.Show("Are you want to close this app?", "Confirmatio massege", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                Application.Exit();
+            }
+        }
+
+        private void label4_Click(object sender, EventArgs e)
+        {
+            signupForm signupForm = new signupForm();
+            signupForm.Show();
+            this.Hide();
+        }
+
+        private void login_btn_Click(object sender, EventArgs e)
+        {
+            //логин проверк на присутствие пользователя в таблице
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+
+                string query = "SELECT * FROM users WHERE username = @usern AND password = @pass";
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand(query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@usern", login_username.Text.Trim());
+                    cmd.Parameters.AddWithValue("@pass", login_password.Text.Trim());
+
+                    NpgsqlDataAdapter adapter = new NpgsqlDataAdapter(cmd);
+                    DataTable table = new DataTable();
+
+                    adapter.Fill(table);
+
+                    if (table.Rows.Count > 0) //если есть да сообщение о входе
+                    {
+                        MessageBox.Show("Login succesfully!", "Information Message", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                        //переход на форму логин
+                        MainForm mainForm = new MainForm();
+                        mainForm.ShowDialog();
+                        this.Hide();
+                    }
+                    else //если нет сообщение об ошибке
+                    {
+                        MessageBox.Show("Incorrect Username or password!", "Error Message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        private void login_showPassword_CheckedChanged(object sender, EventArgs e)
+        {
+            login_password.PasswordChar = login_showPassword.Checked ? '\0' : '*';
+        }
+    }
+}
