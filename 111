@@ -1,0 +1,65 @@
+using System;
+using System.Data;
+using Npgsql;
+using System.Windows.Forms;
+
+namespace Tur_Comp3
+{
+    class MainClass
+    {
+        // Строка подключения
+        public static readonly string con_string = "Server=localhost;Port=5432;Database=Tur_Comp;User Id=postgres;Password=1111;";
+        public static NpgsqlConnection con = new NpgsqlConnection(con_string);
+
+        // --- НОВОЕ ИЗ ВИДЕО: Переменные для хранения имени текущего пользователя ---
+        public static string user; 
+        public static string USER
+        {
+            get { return user; }
+            private set { user = value; }
+        }
+        // -------------------------------------------------------------------------
+
+        public static bool IsValidUser(string username, string pass)
+        {
+            bool isValid = false;
+
+            // Запрос (проверьте, что в базе столбец называется password)
+            string qry = "SELECT * FROM users WHERE username = @user AND password = @pass";
+
+            try
+            {
+                if (con.State == ConnectionState.Closed) con.Open();
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand(qry, con))
+                {
+                    cmd.Parameters.AddWithValue("@user", username);
+                    cmd.Parameters.AddWithValue("@pass", pass);
+
+                    DataTable dt = new DataTable();
+                    NpgsqlDataAdapter da = new NpgsqlDataAdapter(cmd);
+                    da.Fill(dt);
+
+                    if (dt.Rows.Count > 0)
+                    {
+                        isValid = true;
+
+                        // --- ИЗ ВИДЕО: Сохраняем имя пользователя из базы в нашу переменную USER ---
+                        // Используем имя столбца "username" (как в вашей таблице)
+                        USER = dt.Rows[0]["username"].ToString();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка: " + ex.Message);
+            }
+            finally
+            {
+                con.Close();
+            }
+
+            return isValid;
+        }
+    }
+}
