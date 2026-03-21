@@ -1,0 +1,113 @@
+using Npgsql;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using Tur_Comp3;
+
+namespace Tur_Comp3
+{
+
+    public partial class signupForm : Form
+    {
+        //конект строка с базой даных
+        string connectionString = "Server=localhost; Port=5432; Database=Tur_Comp; User Id = postgres; Password=1111;";
+
+        public signupForm()
+        {
+            InitializeComponent();
+        }
+
+        private void close_Click(object sender, EventArgs e)
+        {
+            //при нажатии на кнопку закрыть выводится сообщение. если в ответе yes, то закрывается, если no то остаемся на форме
+            if (MessageBox.Show("Are you want to close this app?", "Confirmatio massege", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                Application.Exit();
+            }
+        }
+
+        //переход на другую форму из лейбла
+        private void label4_Click(object sender, EventArgs e)
+        {
+            LoginForm loginForm = new LoginForm();
+            loginForm.Show();
+            this.Hide();
+        }
+
+        //показать пароль
+        private void signup_showPassword_CheckedChanged(object sender, EventArgs e)
+        {
+            signup_password.PasswordChar = signup_showPassword.Checked ? '\0' : '*';
+            signup_confirmPassword.PasswordChar = signup_showPassword.Checked ? '\0' : '*';
+        }
+
+        //кнопка регистрации
+        private void signup_btn_Click(object sender, EventArgs e)
+        {
+            using (NpgsqlConnection conect = new NpgsqlConnection(connectionString))
+            {
+                conect.Open();
+
+                string checkUsername = "SELECT * FROM users WHERE username = @usern";
+
+                using (NpgsqlCommand checkUsern = new NpgsqlCommand(checkUsername, conect))
+                {
+                    //перенос даных в таблицу и поиск есть ли это имя в базе
+                    checkUsern.Parameters.AddWithValue("usern", signup_username.Text.Trim());
+
+                    NpgsqlDataAdapter adapter = new NpgsqlDataAdapter(checkUsern);
+                    DataTable table = new DataTable();
+
+                    adapter.Fill(table);
+
+                    if (table.Rows.Count > 0) //если текстбокс с юзером пустой или это имя уже есть
+                    {
+                        MessageBox.Show($"{signup_username.Text.Trim()} was taken already", "Error message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    else if (signup_password.Text.Trim().Length < 4) //если пароль меньше 4х символов
+                    {
+                        MessageBox.Show("Invalid Password, at least 4 characters required", "Error message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    else if (signup_password.Text.Trim() != signup_confirmPassword.Text.Trim()) //если пароли не совпадают
+                    {
+                        MessageBox.Show("Password does not match", "Error message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    else //если все верно
+                    {
+                        string insertData = "INSERT INTO users (username, password, date_created, status) VALUES(@usern, @pass, @date, @status)";
+
+                        using (NpgsqlCommand cmd = new NpgsqlCommand(insertData, conect))
+                        {
+                            //добавляем юзера и пароль в базу
+                            cmd.Parameters.AddWithValue("@usern", signup_username.Text.Trim());
+                            cmd.Parameters.AddWithValue("@pass", signup_password.Text.Trim());
+
+                            //добавляем дату и статус в базу
+                            DateTime today = DateTime.Now;
+
+                            cmd.Parameters.AddWithValue("@date", today);
+                            cmd.Parameters.AddWithValue("@status", "Acttive");
+
+                            cmd.ExecuteNonQuery();
+
+                            //регистрация прошла усспешно
+                            MessageBox.Show("Registered successfully!", "Information Message", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                            //переход на форму логин
+                            LoginForm loginForm = new LoginForm();
+                            loginForm.ShowDialog();
+                            this.Hide();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
