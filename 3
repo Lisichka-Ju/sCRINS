@@ -1,0 +1,119 @@
+using Npgsql;
+using System;
+using System.Data;
+using System.Windows.Forms;
+
+namespace Tur_Comp3
+{
+    public partial class signupForm : Form
+    {
+        public signupForm()
+        {
+            InitializeComponent();
+        }
+
+        // Кнопка закрытия
+        private void close_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("Are you want to close this app?", "Confirmation message", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                Application.Exit();
+            }
+        }
+
+        // Переход на форму логина
+        private void label4_Click(object sender, EventArgs e)
+        {
+            LoginForm loginForm = new LoginForm();
+            loginForm.Show();
+            this.Hide();
+        }
+
+        // Показать/скрыть пароль
+        private void signup_showPassword_CheckedChanged(object sender, EventArgs e)
+        {
+            bool isChecked = signup_showPassword.Checked;
+            signup_password.PasswordChar = isChecked ? '\0' : '*';
+            signup_confirmPassword.PasswordChar = isChecked ? '\0' : '*';
+        }
+
+        // КНОПКА РЕГИСТРАЦИИ
+        private void signup_btn_Click(object sender, EventArgs e)
+        {
+            string user = signup_username.Text.Trim();
+            string pass = signup_password.Text.Trim();
+            string cPass = signup_confirmPassword.Text.Trim();
+
+            // 1. Проверка на пустые поля
+            if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(pass) || string.IsNullOrEmpty(cPass))
+            {
+                MessageBox.Show("Please fill all blank fields", "Error message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Используем строку подключения из MainClass
+            using (NpgsqlConnection connect = new NpgsqlConnection(MainClass.con_string))
+            {
+                try
+                {
+                    connect.Open();
+
+                    // 2. Проверка, существует ли уже такой пользователь
+                    string checkUsername = "SELECT COUNT(*) FROM users WHERE username = @usern";
+                    using (NpgsqlCommand checkUsern = new NpgsqlCommand(checkUsername, connect))
+                    {
+                        checkUsern.Parameters.AddWithValue("@usern", user);
+                        long count = (long)checkUsern.ExecuteScalar(); // Получаем количество совпадений
+
+                        if (count > 0)
+                                                {
+                            MessageBox.Show($"{user} was taken already", "Error message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+                    }
+
+                    // 3. Валидация пароля
+                    if (pass.Length < 4)
+                    {
+                        MessageBox.Show("Invalid Password, at least 4 characters required", "Error message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    else if (pass != cPass)
+                    {
+                        MessageBox.Show("Password does not match", "Error message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    else
+                    {
+                        // 4. Если всё верно — вставляем данные
+                        string insertData = "INSERT INTO users (username, password, date_created, status) " +
+                                            "VALUES(@usern, @pass, @date, @status)";
+
+                        using (NpgsqlCommand cmd = new NpgsqlCommand(insertData, connect))
+                        {
+                            cmd.Parameters.AddWithValue("@usern", user);
+                            cmd.Parameters.AddWithValue("@pass", pass);
+                            cmd.Parameters.AddWithValue("@date", DateTime.Today);
+                            cmd.Parameters.AddWithValue("@status", "Active"); // Или любой ваш статус по умолчанию
+
+                            cmd.ExecuteNonQuery(); // Выполняем запись в базу
+
+                            MessageBox.Show("Registered successfully!", "Information message", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                            // Переходим на форму логина после успешной регистрации
+                            LoginForm loginForm = new LoginForm();
+                            loginForm.Show();
+                            this.Hide();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error: " + ex.Message, "Error message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    connect.Close();
+                }
+            }
+        }
+    }
+}
