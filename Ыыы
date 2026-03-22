@@ -1,0 +1,70 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.SqlClient; // Don't forget to add this using directive
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace WindowsFormsApp1 // Or whatever your project's namespace is
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        // Connection string method
+        private string stringCon()
+        {
+            return @"Data Source=user-pc\sqlexpress;Initial Catalog=JmutovDB;Integrated Security=True";
+        }
+
+        // Event handler for button1 click
+        private void button1_Click(object sender, EventArgs e)
+        {
+            var queryListCodeRequest = "SELECT * FROM Пользователи";
+            loadElementToComboBox(queryListCodeRequest, "Логин", comboBox1); // Assuming comboBox1 is the name of your ComboBox
+        }
+
+        // Method to load elements into a ComboBox
+        public void loadElementToComboBox(string stringQuery, string column, ComboBox myBox)
+        {
+            List<string> columnValues = GetColumnValues(stringQuery, column);
+            myBox.Items.AddRange(columnValues.ToArray());
+        }
+
+        // Method to get column values from the database
+        public List<string> GetColumnValues(string query, string columnName)
+        {
+            List<string> columnValues = new List<string>();
+
+            // Ensure the SqlConnection is properly disposed
+            using (SqlConnection myCon = new SqlConnection(stringCon()))
+            {
+                myCon.Open();
+
+                // Ensure the SqlCommand is properly disposed
+                using (SqlCommand command = new SqlCommand(query, myCon))
+                {
+                    // Ensure the SqlDataReader is properly disposed
+                    using (SqlDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            object columnValueObject = reader.GetValue(reader.GetOrdinal(columnName));
+                            // Check for DBNull.Value before converting to string
+                            string columnValue = columnValueObject != DBNull.Value ? columnValueObject.ToString() : "";
+                            columnValues.Add(columnValue);
+                        }
+                    }
+                }
+            }
+            return columnValues;
+        }
+    }
+}
