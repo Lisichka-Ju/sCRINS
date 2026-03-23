@@ -1,0 +1,78 @@
+public shopForm()
+{
+    InitializeComponent();
+}
+
+public void cardItems(int id, string productname, string stock, string price, Image image, string productid, string category)
+{
+    var card = new cardProduct()
+    {
+        Id = id,
+        productName = productname,
+        productStock = stock,
+        productPrice = price,
+        productImage = image,
+        productId = productid,
+        category = category,
+    };
+
+    flowLayoutPanel1.Controls.Add(card);
+}
+
+public void loadProducts()
+{
+    try
+    {
+        using (SqlConnection connect = new SqlConnection(connection))
+        {
+            connect.Open();
+
+            string selectData = "SELECT * FROM products";
+
+            using (SqlCommand cmd = new SqlCommand(selectData, connect))
+            {
+                SqlDataAdapter adapter = new SqlDataAdapter(cmd);
+                DataTable table = new DataTable();
+
+                adapter.Fill(table);
+
+                flowLayoutPanel1.Controls.Clear();
+
+                foreach (DataRow row in table.Rows)
+                {
+                    int id = row["id"] != DBNull.Value ? (int)row["id"] : 0;
+                    string productname = row["productname"] != DBNull.Value ? row["productname"].ToString() : "N/A";
+                    string stock = row["stock"] != DBNull.Value ? row["stock"].ToString() : "0";
+                    string price = row["price"] != DBNull.Value ? row["price"].ToString() : "0.00";
+
+                    string productid = row["productid"] != DBNull.Value ? row["productid"].ToString() : "N/A";
+                    string category = row["category"] != DBNull.Value ? row["category"].ToString() : "N/A";
+
+                    Image image = null;
+
+                    if (row["image"] != DBNull.Value)
+                    {
+                        string imagePath = row["image"].ToString();
+                        if (!string.IsNullOrEmpty(imagePath) && File.Exists(imagePath))
+                        {
+                            try
+                            {
+                                image = Image.FromFile(imagePath);
+                            }
+                            catch (Exception exx)
+                            {
+                                image = null;
+                            }
+                        }
+                    }
+
+                    cardItems(id, productname, stock, price, image, productid, category);
+                }
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Error: {ex}", "Error Message", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+}
